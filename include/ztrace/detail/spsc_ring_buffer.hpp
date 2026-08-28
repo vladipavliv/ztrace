@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <type_traits>
+#include <vector>
 
 #include "ztrace/config.hpp"
 
@@ -52,19 +53,19 @@ public:
     return true;
   }
 
-  std::vector<T> drain() {
+  void drain(std::vector<T> &vec) {
     std::vector<T> result;
 
     const size_t tail = tail_.load(std::memory_order_relaxed);
     const size_t head = head_.load(std::memory_order_acquire);
 
     if (tail == head) {
-      return result;
+      return;
     }
 
     const size_t count = head >= tail ? head - tail : Capacity - tail + head;
 
-    result.reserve(count);
+    vec.reserve(count);
 
     size_t index = tail;
 
@@ -74,7 +75,6 @@ public:
     }
 
     tail_.store(head, std::memory_order_release);
-    return result;
   }
 
   void clear() noexcept {
@@ -115,7 +115,7 @@ private:
   alignas(64) std::atomic<size_t> head_{0};
   alignas(64) std::atomic<size_t> tail_{0};
 
-  T data_[Capacity]{};
+  alignas(64) T data_[Capacity]{};
 };
 
 } // namespace ztrace::detail

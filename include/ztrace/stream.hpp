@@ -75,7 +75,7 @@ public:
 
   bool push(const T &value) noexcept { return ring_->push(value); }
   bool pop(T &value) noexcept { return ring_->pop(value); }
-  std::vector<T> drain() { return ring_->drain(); }
+  void drain(std::vector<T> &vec) { ring_->drain(vec); }
 
   size_t size() const noexcept { return ring_->size(); }
   bool empty() const noexcept { return ring_->empty(); }

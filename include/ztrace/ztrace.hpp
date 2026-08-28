@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include "ztrace/config.hpp"
 #include "ztrace/detail/spsc_ring_buffer.hpp"
 #include "ztrace/stream.hpp"

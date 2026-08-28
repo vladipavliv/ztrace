@@ -69,8 +69,8 @@ public:
   const ShmHeader *header() const { return static_cast<const ShmHeader *>(data()); }
 
   template <typename T>
-  auto get_variable(std::string_view name,
-                    MemoryOrder order = MemoryOrder::Relaxed) -> VariableStorage<T> * {
+  VariableStorage<T> &get_variable(std::string_view name,
+                                   MemoryOrder order = MemoryOrder::Relaxed) {
     if (!initialized_) {
       init();
     }
@@ -83,10 +83,10 @@ public:
       if (storage->order != order) {
         throw std::runtime_error("Memory order mismatch for variable: " + std::string(name));
       }
-      return storage;
+      return *storage;
     }
 
-    return create_variable<T>(name, order);
+    return *create_variable<T>(name, order);
   }
 
   void release() {
@@ -107,13 +107,14 @@ private:
 
     while (offset < hdr->used_size) {
       auto *storage = reinterpret_cast<VariableStorage<T> *>(base + offset);
-      if (std::strcmp(storage->name, name.data()) == 0) {
+      if (std::string_view(storage->name) == name) {
         if (storage->type != detect_type<T>()) {
           return nullptr;
         }
         return storage;
       }
-      offset += sizeof(VariableStorage<T>);
+      constexpr size_t alignment = alignof(VariableStorage<T>);
+      offset = (offset + sizeof(VariableStorage<T>) + alignment - 1) & ~(alignment - 1);
     }
 
     return nullptr;
@@ -122,7 +123,10 @@ private:
   template <typename T>
   VariableStorage<T> *create_variable(std::string_view name, MemoryOrder order) {
     auto *hdr = header();
-    size_t offset = hdr->used_size;
+
+    constexpr size_t alignment = alignof(VariableStorage<T>);
+    size_t offset = (hdr->used_size + alignment - 1) & ~(alignment - 1);
+
     size_t storage_size = sizeof(VariableStorage<T>);
 
     if (offset + storage_size > hdr->total_size) {
@@ -132,8 +136,10 @@ private:
     char *base = static_cast<char *>(data());
     auto *storage = new (base + offset) VariableStorage<T>();
 
-    std::strncpy(storage->name, name.data(), MAX_NAME_LENGTH);
-    storage->name[MAX_NAME_LENGTH] = '\0';
+    const size_t copy_len = std::min(name.size(), MAX_NAME_LENGTH - 1);
+    std::memcpy(storage->name, name.data(), copy_len);
+    storage->name[copy_len] = '\0';
+
     storage->type = detect_type<T>();
     storage->order = order;
     storage->value.store(T{}, std::memory_order_relaxed);
@@ -143,8 +149,6 @@ private:
 
     return storage;
   }
-
-  static constexpr size_t DEFAULT_SHM_SIZE = 2 * 1024 * 1024;
 
   template <typename T>
   static VarType detect_type() {

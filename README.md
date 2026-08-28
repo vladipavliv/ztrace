@@ -4,24 +4,33 @@ Lightweight cross-platform C++ telemetry library based on shared memory. Designe
 
 ### Features
 
-- **C++20** - Modern C++ API
-- **Cross-platform** - Platform-independent API
-- **Shared-memory IPC** - Direct inter-process communication without sockets
-- **Lock-free variables** - Atomic values directly in shared memory
-- **SPSC ring buffers** - Lock-free single-producer/single-consumer event streams
-- **Persistent telemetry** - Monitoring processes survive application restarts
-- **No serialization** - Trivially copyable data stored directly in shared memory
-- **Header-only API** - Simple integration
+- **Zero-copy IPC** - Direct shared-memory access, no sockets, no serialization overhead
+- **Connect by name** - Variables and streams connect via name across processes
+- **Survive restarts** - Stop, rebuild, and restart either side
+- **Lock-free streams** - Single-producer/single-consumer ring buffers with atomic operations
+- **Header-only** - Drop in and go
 
 ### Requirements
 
 - **C++20**
 - **CMake 3.20+**
-- **Boost 1.83+** - Used for cross-platform shared memory
+- **Boost 1.83+**
 
 ### Usage
 
-See the [`examples`](examples) directory for usage examples.
+ZeroTrace has no setup ceremony and no required startup order. Create a `Variable` in one process, create a `Viewer` in another - they instantly connect. Restart the producer and the consumer keeps reading without a hiccup. Same for `Stream`: push on one side, `drain` on the other.
+
+```cpp
+// producer.cpp
+ztrace::Variable<double> fps("fps", 60.0);
+fps.update(144.0);
+
+// consumer.cpp
+ztrace::Viewer<double> fps("fps");
+double current = fps.read(); // 144.0
+```
+
+For more examples see [`examples`](examples) directory.
 
 ### License
 

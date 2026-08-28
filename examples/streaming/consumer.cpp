@@ -19,7 +19,8 @@ int main() {
     std::cout << "Streaming consumer started. Reading frames..." << std::endl;
 
     while (true) {
-      auto frames = frame_stream.drain();
+      std::vector<FrameData> frames;
+      frame_stream.drain(frames);
 
       if (!frames.empty()) {
         for (const auto &frame : frames) {
