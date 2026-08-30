@@ -16,8 +16,8 @@ using ShmPtr = std::unique_ptr<Shm>;
 struct alignas(64) ShmHeader {
   uint64_t magic;
   uint32_t version;
-  size_t total_size;
-  size_t used_size;
+  uint32_t total_size;
+  uint32_t used_size;
   uint32_t variable_count;
 };
 
@@ -69,7 +69,7 @@ public:
   const ShmHeader *header() const { return static_cast<const ShmHeader *>(data()); }
 
   template <typename T>
-  VariableStorage<T> &get_variable(std::string_view name,
+  VariableStorage<T> &get_variable(std::string_view name, int32_t update_rate = 1,
                                    MemoryOrder order = MemoryOrder::Relaxed) {
     if (!initialized_) {
       init();
@@ -86,7 +86,7 @@ public:
       return *storage;
     }
 
-    return *create_variable<T>(name, order);
+    return *create_variable<T>(name, update_rate, order);
   }
 
   void release() {
@@ -121,7 +121,8 @@ private:
   }
 
   template <typename T>
-  VariableStorage<T> *create_variable(std::string_view name, MemoryOrder order) {
+  VariableStorage<T> *create_variable(std::string_view name, int32_t update_rate,
+                                      MemoryOrder order) {
     auto *hdr = header();
 
     constexpr size_t alignment = alignof(VariableStorage<T>);
@@ -136,13 +137,15 @@ private:
     char *base = static_cast<char *>(data());
     auto *storage = new (base + offset) VariableStorage<T>();
 
+    storage->value.store(T{}, std::memory_order_relaxed);
+
     const size_t copy_len = std::min(name.size(), MAX_NAME_LENGTH - 1);
     std::memcpy(storage->name, name.data(), copy_len);
     storage->name[copy_len] = '\0';
 
+    storage->update_rate = update_rate;
     storage->type = detect_type<T>();
     storage->order = order;
-    storage->value.store(T{}, std::memory_order_relaxed);
 
     hdr->used_size = offset + storage_size;
     hdr->variable_count++;

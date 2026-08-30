@@ -19,6 +19,17 @@ class MainWindow(QMainWindow):
         self.table = VariableTableView()
         self.table.setModel(self.model)
 
+        header = self.table.horizontalHeader()
+
+        self.table.setColumnWidth(0, 100)  # Name
+        self.table.setColumnWidth(1, 100)  # Value
+        self.table.setColumnWidth(2, 70)   # Type
+        self.table.setColumnWidth(3, 70)   # Min
+        self.table.setColumnWidth(4, 70)   # Max
+        self.table.setColumnWidth(5, 70)   # Rate
+        self.table.setColumnWidth(6, 70)   # Order
+        self.table.setColumnWidth(7, 70)   # Offset
+
         self.toolbar = Toolbar()
         self.toolbar.interval_changed.connect(self._set_interval)
         self.toolbar.toggle_scan.connect(self._set_scanning)
@@ -28,7 +39,15 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self.toolbar)
-        layout.addWidget(self.table)
+
+        table_container = QWidget()
+        table_layout = QVBoxLayout(table_container)
+        table_layout.setContentsMargins(16, 16, 16, 16)
+        table_layout.setSpacing(0)
+        table_layout.addWidget(self.table)
+
+        layout.addWidget(table_container)
+
         self.setCentralWidget(central)
 
         self._scanning = False

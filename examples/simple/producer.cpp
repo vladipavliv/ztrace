@@ -8,8 +8,10 @@ int main() {
   try {
     ztrace::init();
 
-    ztrace::Variable<double> fps("fps", 0.0, ztrace::MemoryOrder::Relaxed);
-    ztrace::Variable<int> players("players", 0, ztrace::MemoryOrder::Relaxed);
+    const int32_t update_rate_hz = 100;
+
+    ztrace::Variable<double> fps("fps", update_rate_hz, 0.0, ztrace::MemoryOrder::Relaxed);
+    ztrace::Variable<int> players("players", update_rate_hz, 0, ztrace::MemoryOrder::Relaxed);
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -29,7 +31,7 @@ int main() {
       /*      std::cout << "[Producer] FPS: " << current_fps << ", Players: " << current_players
                       << std::endl;*/
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000 / update_rate_hz));
     }
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;

@@ -1,5 +1,5 @@
 """Variable table with QAbstractTableModel and sparkline delegate."""
-from PyQt6.QtWidgets import QTableView, QAbstractItemView
+from PyQt6.QtWidgets import QTableView, QAbstractItemView, QHeaderView
 from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex
 from PyQt6.QtGui import QColor, QBrush, QFont
 
@@ -8,7 +8,11 @@ from .sparkline_delegate import SparklineDelegate
 
 
 class VariableTableModel(QAbstractTableModel):
-    COLUMNS = ["Name", "Type", "Value", "Order", "Offset", "History"]
+    COLUMNS = [
+        "Name", "Value", "Type",
+        "Min", "Max", "Rate",
+        "Order", "Offset", "History"
+    ]
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -88,6 +92,9 @@ class VariableTableModel(QAbstractTableModel):
                 var.name,
                 var.var_type,
                 str(var.value),
+                str(var.min_value) if var.min_value is not None else "—",
+                str(var.max_value) if var.max_value is not None else "—",
+                "∞" if var.update_rate == 0 else f"{var.update_rate} Hz",
                 var.order,
                 f"0x{var.offset:X}",
                 f"{len(var.history)} pts"
@@ -96,8 +103,8 @@ class VariableTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.TextAlignmentRole:
             if col == 0:
                 return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-            if col == 2:
-                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            if col == 1:
+                return Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter
             return Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter
 
         if role == Qt.ItemDataRole.BackgroundRole:
@@ -110,11 +117,11 @@ class VariableTableModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.FontRole:
             font = QFont("JetBrains Mono", 10)
-            if col == 2:
+            if col in (0, 1):
                 font.setBold(True)
             return font
 
-        if role == Qt.ItemDataRole.UserRole and col == 5:
+        if role == Qt.ItemDataRole.UserRole and col == 8:
             return var.history
 
         return None
@@ -126,8 +133,11 @@ class VariableTableView(QTableView):
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.verticalHeader().setVisible(False)
-        self.horizontalHeader().setStretchLastSection(True)
-        self.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        header = self.horizontalHeader()
+        header.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+        header.setStretchLastSection(True)
+        
         self.setShowGrid(False)
         self.setStyleSheet("""
             QTableView {
@@ -153,12 +163,6 @@ class VariableTableView(QTableView):
                 color: white;
             }
         """)
-        self.setColumnWidth(0, 180)
-        self.setColumnWidth(1, 80)
-        self.setColumnWidth(2, 140)
-        self.setColumnWidth(3, 80)
-        self.setColumnWidth(4, 90)
-        self.setColumnWidth(5, 160)
 
         self.sparkline_delegate = SparklineDelegate(self)
-        self.setItemDelegateForColumn(5, self.sparkline_delegate)
+        self.setItemDelegateForColumn(8, self.sparkline_delegate)

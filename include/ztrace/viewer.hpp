@@ -27,6 +27,7 @@ public:
   Viewer &operator=(Viewer &&) = delete;
 
   T read() const { return value_.load(order_); }
+  uint32_t update_rate() const { return storage_.update_rate; }
 
 private:
   const detail::VariableStorage<T> &storage_;

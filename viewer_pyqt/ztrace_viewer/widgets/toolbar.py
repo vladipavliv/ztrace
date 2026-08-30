@@ -1,7 +1,7 @@
 """Top toolbar with interval control and status."""
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLineEdit, QPushButton, QLabel
 from PyQt6.QtCore import pyqtSignal, Qt
-
+from PyQt6.QtGui import QIntValidator
 
 class Toolbar(QWidget):
     interval_changed = pyqtSignal(int)
@@ -22,6 +22,10 @@ class Toolbar(QWidget):
 
         self.edit_interval = QLineEdit("100")
         self.edit_interval.setFixedWidth(70)
+
+        validator = QIntValidator(1, 60000, self)
+        self.edit_interval.setValidator(validator)
+
         self.edit_interval.setStyleSheet("""
             QLineEdit {
                 background-color: #2d3436;
@@ -91,12 +95,13 @@ class Toolbar(QWidget):
         """)
 
     def _on_interval_changed(self):
-        try:
-            val = int(self.edit_interval.text())
-            if val >= 10:
-                self.interval_changed.emit(val)
-        except ValueError:
-            pass
+        text = self.edit_interval.text()
+
+        if not text:
+            return
+
+        value = int(text)
+        self.interval_changed.emit(value)
 
     def _on_toggle(self):
         running = self.btn_toggle.text().startswith("⏹")

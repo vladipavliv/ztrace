@@ -12,9 +12,9 @@ namespace ztrace {
 template <typename T>
 class Variable {
 public:
-  explicit Variable(std::string_view name, T initial = T{},
+  explicit Variable(std::string_view name, int32_t update_rate = 1, T initial = T{},
                     MemoryOrder order = MemoryOrder::Relaxed)
-      : storage_(detail::ShmManager::instance().get_variable<T>(name, order)),
+      : storage_(detail::ShmManager::instance().get_variable<T>(name, update_rate, order)),
         value_(storage_.value),
         order_(storage_.order == MemoryOrder::AcquireRelease ? std::memory_order_release
                                                              : std::memory_order_relaxed) {
