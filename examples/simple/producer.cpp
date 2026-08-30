@@ -26,10 +26,10 @@ int main() {
       fps.update(current_fps);
       players.update(current_players);
 
-      std::cout << "[Producer] FPS: " << current_fps << ", Players: " << current_players
-                << std::endl;
+      /*      std::cout << "[Producer] FPS: " << current_fps << ", Players: " << current_players
+                      << std::endl;*/
 
-      std::this_thread::sleep_for(std::chrono::seconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
