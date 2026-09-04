@@ -11,6 +11,8 @@ struct FrameData {
   uint64_t timestamp;
 };
 
+const size_t BUFFER_SIZE = 10;
+
 int main() {
   try {
     ztrace::init();
@@ -20,7 +22,8 @@ int main() {
 
     while (true) {
       std::vector<FrameData> frames;
-      frame_stream.drain(frames);
+      frames.resize(BUFFER_SIZE);
+      frame_stream.drain(frames.data(), frames.size());
 
       if (!frames.empty()) {
         for (const auto &frame : frames) {

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <string_view>
-#include <vector>
 
 #include "ztrace/config.hpp"
 #include "ztrace/detail/shm_manager.hpp"
@@ -19,7 +19,7 @@ public:
 
   bool push(const T &value) noexcept { return storage_->ring.push(value); }
   bool pop(T &value) noexcept { return storage_->ring.pop(value); }
-  void drain(std::vector<T> &vec) { storage_->ring.drain(vec); }
+  size_t drain(T *data, size_t size) noexcept { return storage_->ring.drain(data, size); }
   size_t size() const noexcept { return storage_->ring.size(); }
   bool empty() const noexcept { return storage_->ring.empty(); }
   bool full() const noexcept { return storage_->ring.full(); }

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <type_traits>
-#include <vector>
 
 #include "ztrace/config.hpp"
 
@@ -54,28 +54,26 @@ public:
     return true;
   }
 
-  void drain(std::vector<T> &vec) {
-    std::vector<T> result;
-
+  size_t drain(T *data, size_t size) noexcept {
     const size_t tail = tail_.load(std::memory_order_relaxed);
     const size_t head = head_.load(std::memory_order_acquire);
 
-    if (tail == head) {
-      return;
+    if (tail == head || size == 0) {
+      return 0;
     }
 
-    const size_t count = head >= tail ? head - tail : Capacity - tail + head;
-
-    vec.reserve(count);
+    const size_t available = head >= tail ? head - tail : Capacity - tail + head;
+    const size_t count = std::min(available, size);
 
     size_t index = tail;
 
     for (size_t i = 0; i < count; ++i) {
-      result.push_back(data_[index]);
+      data[i] = data_[index];
       index = increment(index);
     }
 
-    tail_.store(head, std::memory_order_release);
+    tail_.store(index, std::memory_order_release);
+    return count;
   }
 
   void clear() noexcept {
