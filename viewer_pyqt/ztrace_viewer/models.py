@@ -1,4 +1,4 @@
-"""Data models for ZeroTrace variables."""
+"""Data models for ztrace variables."""
 from dataclasses import dataclass, field
 from typing import Any, List
 

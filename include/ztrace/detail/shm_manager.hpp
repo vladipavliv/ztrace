@@ -89,6 +89,22 @@ public:
     return *create_variable<T>(name, update_rate, order);
   }
 
+  auto variables() const -> std::vector<std::string> {
+    std::vector<std::string> result;
+    result.reserve(header()->variable_count);
+
+    const auto *base = static_cast<const std::byte *>(data());
+    size_t offset = sizeof(ShmHeader);
+
+    while (offset < header()->used_size) {
+      const auto *storage = reinterpret_cast<const VariableStorage<int32_t> *>(base + offset);
+
+      result.emplace_back(storage->name);
+      offset += VARIABLE_SIZE;
+    }
+    return result;
+  }
+
   void release() {
     if (!initialized_) {
       return;

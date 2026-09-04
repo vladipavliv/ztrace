@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ZeroTrace VERSION 0.1.0 LANGUAGES CXX)
+project(яекфсу VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,7 +19,7 @@ if(ZTRACE_BUILD_EXAMPLES)
 endif()
 
 message(STATUS "")
-message(STATUS "ZeroTrace Configuration:")
+message(STATUS "ztrace Configuration:")
 message(STATUS "  C++ Standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "  Build examples: ${ZTRACE_BUILD_EXAMPLES}")
 message(STATUS "")

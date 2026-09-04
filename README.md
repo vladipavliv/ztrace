@@ -1,4 +1,4 @@
-# ZeroTrace
+# ztrace
 
 Lightweight cross-platform C++ telemetry library based on shared memory. Designed for low-latency and high-throughput applications where telemetry should be cheap and independent from the monitored process.
 
@@ -18,7 +18,7 @@ Lightweight cross-platform C++ telemetry library based on shared memory. Designe
 
 ### Usage
 
-ZeroTrace has no setup ceremony and no required startup order. Create a `Variable` in one process, create a `Viewer` in another - they instantly connect. Restart the producer and the consumer keeps reading without a hiccup. Same for `Stream`: push on one side, `drain` on the other.
+ztrace has no setup ceremony and no required startup order. Create a `Variable` in one process, create a `Viewer` in another - they instantly connect. Restart the producer and the consumer keeps reading without a hiccup. Same for `Stream`: push on one side, `drain` on the other.
 
 ```cpp
 // producer.cpp

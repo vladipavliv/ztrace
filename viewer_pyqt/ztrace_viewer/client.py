@@ -1,4 +1,4 @@
-"""ZeroTrace shared-memory client."""
+"""ztrace shared-memory client."""
 from multiprocessing import shared_memory as shm
 from multiprocessing import resource_tracker
 import struct
@@ -27,8 +27,8 @@ VAR_DOUBLE = 3
 VAR_BOOL = 4
 
 
-class ZeroTraceClient:
-    """Reads ZeroTrace variables from POSIX shared memory 'ztrace_shm'."""
+class ZTraceClient:
+    """Reads ztrace variables from POSIX shared memory 'ztrace_shm'."""
 
     def __init__(self):
         self._shm: Optional[shm.SharedMemory] = None
@@ -49,7 +49,7 @@ class ZeroTraceClient:
         except FileNotFoundError:
             return False
         except Exception as e:
-            print(f"[ZeroTrace] Connection error: {e}")
+            print(f"[ztrace] Connection error: {e}")
             return False
 
     def disconnect(self):
@@ -76,7 +76,7 @@ class ZeroTraceClient:
                 "var_count": struct.unpack_from("<I", self._buf, 20)[0],
             }
         except Exception as e:
-            print(f"[ZeroTrace] Header error: {e}")
+            print(f"[ztrace] Header error: {e}")
             return None
 
     def scan(self) -> Optional[List[Variable]]:

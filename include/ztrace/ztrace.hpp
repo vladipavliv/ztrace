@@ -10,4 +10,5 @@
 
 namespace ztrace {
 void init(size_t size = DEFAULT_SHM_SIZE) { detail::ShmManager::instance().init(size); }
+auto variables() -> std::vector<std::string> { return detail::ShmManager::instance().variables(); }
 } // namespace ztrace

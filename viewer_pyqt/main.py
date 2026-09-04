@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ZeroTrace Monitor — entry point."""
+"""ztrace Monitor — entry point."""
 import sys
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt

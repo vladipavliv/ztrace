@@ -2,7 +2,7 @@
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
 from PyQt6.QtCore import QTimer
 
-from ..client import ZeroTraceClient
+from ..client import ZTraceClient
 from .toolbar import Toolbar
 from .variable_table import VariableTableView, VariableTableModel
 
@@ -10,11 +10,11 @@ from .variable_table import VariableTableView, VariableTableModel
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ZeroTrace Monitor")
+        self.setWindowTitle("ztrace Monitor")
         self.setMinimumSize(1000, 650)
         self.resize(1200, 800)
 
-        self.client = ZeroTraceClient()
+        self.client = ZTraceClient()
         self.model = VariableTableModel()
         self.table = VariableTableView()
         self.table.setModel(self.model)

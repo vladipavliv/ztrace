@@ -8,6 +8,7 @@
 namespace ztrace::detail {
 
 inline constexpr size_t MAX_NAME_LENGTH = 32;
+inline constexpr size_t VARIABLE_SIZE = 64;
 
 template <typename T>
 struct alignas(64) VariableStorage {
@@ -26,7 +27,7 @@ static_assert(offsetof(VariableStorage<double>, name) == 8);
 static_assert(offsetof(VariableStorage<int32_t>, update_rate) == 40);
 static_assert(offsetof(VariableStorage<int64_t>, update_rate) == 40);
 
-static_assert(sizeof(VariableStorage<int32_t>) == 64);
-static_assert(sizeof(VariableStorage<int64_t>) == 64);
+static_assert(sizeof(VariableStorage<int32_t>) == VARIABLE_SIZE);
+static_assert(sizeof(VariableStorage<int64_t>) == VARIABLE_SIZE);
 
 } // namespace ztrace::detail
