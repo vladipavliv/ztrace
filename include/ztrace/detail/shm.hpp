@@ -12,6 +12,17 @@ namespace ztrace::detail {
 
 namespace ipc = boost::interprocess;
 
+struct alignas(64) ShmHeader {
+  uint64_t magic;
+  uint32_t version;
+  uint32_t total_size;
+  uint32_t used_size;
+  uint32_t variable_count;
+  uint32_t stream_count;
+};
+
+static_assert(sizeof(ShmHeader) == 64);
+
 class Shm {
 public:
   Shm(std::string_view name, std::size_t size)
@@ -54,5 +65,7 @@ private:
   ipc::shared_memory_object shm_;
   ipc::mapped_region region_;
 };
+
+using ShmPtr = std::unique_ptr<Shm>;
 
 } // namespace ztrace::detail

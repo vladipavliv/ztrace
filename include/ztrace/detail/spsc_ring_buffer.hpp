@@ -12,6 +12,7 @@ namespace ztrace::detail {
 template <typename T, size_t Capacity = DEFAULT_RING_BUFFER_CAPACITY>
 class SpscRingBuffer {
   static_assert(Capacity > 1, "Capacity must be greater than 1");
+  static_assert(Capacity % CACHE_LINE_SIZE == 0, "Capacity must be a power of a cache line");
   static_assert(std::is_trivially_copyable_v<T>,
                 "T must be trivially copyable for use in shared memory");
   static_assert(std::atomic<size_t>::is_always_lock_free,
