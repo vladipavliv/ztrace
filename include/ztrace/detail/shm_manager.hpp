@@ -112,26 +112,36 @@ public:
     return *create_stream<T, Capacity>(name, update_rate);
   }
 
-  std::vector<std::string> variables() const {
-    std::vector<std::string> result;
+  auto variables() const -> std::vector<StorageHeader> {
+    std::vector<StorageHeader> result;
     result.reserve(header()->variable_count);
 
     scan([&](const StorageHeader *storage) {
       if (storage->storage_type == StorageType::Variable) {
-        result.emplace_back(storage->name);
+        StorageHeader copy{
+            storage->storage_type, storage->data_type, storage->order,
+            storage->update_rate,  storage->data_size,
+        };
+        std::memcpy(copy.name, storage->name, MAX_NAME_LENGTH);
+        result.emplace_back(copy);
       }
     });
 
     return result;
   }
 
-  std::vector<std::string> streams() const {
-    std::vector<std::string> result;
+  auto streams() const -> std::vector<StorageHeader> {
+    std::vector<StorageHeader> result;
     result.reserve(header()->stream_count);
 
     scan([&](const StorageHeader *storage) {
       if (storage->storage_type == StorageType::Stream) {
-        result.emplace_back(storage->name);
+        StorageHeader copy{
+            storage->storage_type, storage->data_type, storage->order,
+            storage->update_rate,  storage->data_size,
+        };
+        std::memcpy(copy.name, storage->name, MAX_NAME_LENGTH);
+        result.emplace_back(copy);
       }
     });
 
