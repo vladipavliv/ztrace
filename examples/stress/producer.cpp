@@ -36,7 +36,7 @@ int main() {
     const size_t doubleVarsCount = 10;
     std::vector<std::unique_ptr<ztrace::Variable<double>>> doubleVars;
     doubleVars.reserve(doubleVarsCount);
-    for (int i = 0; i < doubleVarsCount; ++i) {
+    for (size_t i = 0; i < doubleVarsCount; ++i) {
       const std::string name = "double" + std::to_string(i);
       auto varPtr = std::make_unique<ztrace::Variable<double>>(name, i + 1, 0);
       doubleVars.push_back(std::move(varPtr));

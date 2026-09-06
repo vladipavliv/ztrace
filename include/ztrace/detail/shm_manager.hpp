@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -27,6 +28,7 @@ public:
   ~ShmManager() = default;
 
   void init(size_t size = DEFAULT_SHM_SIZE) {
+    std::scoped_lock<std::recursive_mutex> lock{mutex_};
     if (initialized_) {
       return;
     }
@@ -43,12 +45,13 @@ public:
       if (hdr->magic != MAGIC) {
         hdr->magic = MAGIC;
         hdr->version = 1;
-        hdr->total_size = size;
-        hdr->used_size = sizeof(ShmHeader);
-        hdr->variable_count = 0;
-        hdr->stream_count = 0;
-      }
+        hdr->total_size.store(size, std::memory_order_relaxed);
+        hdr->used_size.store(sizeof(ShmHeader), std::memory_order_relaxed);
+        hdr->variable_count.store(0, std::memory_order_relaxed);
+        hdr->stream_count.store(0, std::memory_order_relaxed);
 
+        std::atomic_thread_fence(std::memory_order_release);
+      }
       initialized_ = true;
     } catch (const std::exception &e) {
       throw std::runtime_error("Failed to initialize shared memory: " + std::string(e.what()));
@@ -66,62 +69,52 @@ public:
   template <typename T>
   VariableStorage<T> &get_variable(std::string_view name, int32_t update_rate = 1,
                                    MemoryOrder order = MemoryOrder::Relaxed) {
-
     if (!initialized_) {
       init();
     }
-
     if (auto *storage = find_variable<T>(name)) {
       if (storage->data_type != detect_type<T>()) {
         throw std::runtime_error("Type mismatch for variable: " + std::string(name));
       }
-
       if (storage->data_size != sizeof(T)) {
         throw std::runtime_error("Data size mismatch for variable: " + std::string(name));
       }
-
       if (storage->order != order) {
         throw std::runtime_error("Memory order mismatch for variable: " + std::string(name));
       }
-
       return *storage;
     }
-
     return *create_variable<T>(name, update_rate, order);
   }
 
   template <typename T, size_t Capacity = DEFAULT_RING_BUFFER_CAPACITY>
   StreamStorage<T, Capacity> &get_stream(std::string_view name, int32_t update_rate = 1) {
-
     if (!initialized_) {
       init();
     }
-
     if (auto *storage = find_stream<T, Capacity>(name)) {
       if (storage->data_type != detect_type<T>()) {
         throw std::runtime_error("Type mismatch for stream: " + std::string(name));
       }
-
       if (storage->data_size != sizeof(SpscRingBuffer<T, Capacity>)) {
         throw std::runtime_error("Ring buffer size mismatch for stream: " + std::string(name));
       }
-
       return *storage;
     }
-
     return *create_stream<T, Capacity>(name, update_rate);
   }
 
   auto variables() const -> std::vector<StorageHeader> {
+    if (!initialized_) {
+      throw std::runtime_error("ztrace not initialized");
+    }
     std::vector<StorageHeader> result;
     result.reserve(header()->variable_count);
 
     scan([&](const StorageHeader *storage) {
       if (storage->storage_type == StorageType::Variable) {
-        StorageHeader copy{
-            storage->storage_type, storage->data_type, storage->order,
-            storage->update_rate,  storage->data_size,
-        };
+        StorageHeader copy{storage->storage_type, storage->data_type, storage->order,
+                           storage->update_rate,  storage->data_size, {0}};
         std::memcpy(copy.name, storage->name, MAX_NAME_LENGTH);
         result.emplace_back(copy);
       }
@@ -131,15 +124,16 @@ public:
   }
 
   auto streams() const -> std::vector<StorageHeader> {
+    if (!initialized_) {
+      throw std::runtime_error("ztrace not initialized");
+    }
     std::vector<StorageHeader> result;
     result.reserve(header()->stream_count);
 
     scan([&](const StorageHeader *storage) {
       if (storage->storage_type == StorageType::Stream) {
-        StorageHeader copy{
-            storage->storage_type, storage->data_type, storage->order,
-            storage->update_rate,  storage->data_size,
-        };
+        StorageHeader copy{storage->storage_type, storage->data_type, storage->order,
+                           storage->update_rate,  storage->data_size, {0}};
         std::memcpy(copy.name, storage->name, MAX_NAME_LENGTH);
         result.emplace_back(copy);
       }
@@ -169,9 +163,7 @@ private:
 
     while (offset < hdr->used_size) {
       const auto *storage = reinterpret_cast<const StorageHeader *>(base + offset);
-
       callback(storage);
-
       offset += storage_size(storage);
     }
   }
@@ -214,12 +206,14 @@ private:
     const auto *hdr = header();
     auto *base = static_cast<std::byte *>(data());
 
+    uint32_t used_size = hdr->used_size.load(std::memory_order_acquire);
     size_t offset = sizeof(ShmHeader);
 
-    while (offset < hdr->used_size) {
+    while (offset < used_size) {
       auto *storage = reinterpret_cast<StorageHeader *>(base + offset);
 
       if (storage->storage_type == StorageType::Stream && std::string_view(storage->name) == name) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         return reinterpret_cast<StreamStorage<T, Capacity> *>(storage);
       }
 
@@ -232,18 +226,24 @@ private:
   template <typename T>
   VariableStorage<T> *create_variable(std::string_view name, int32_t update_rate,
                                       MemoryOrder order) {
-
     auto *hdr = header();
-
     constexpr size_t storage_size = sizeof(VariableStorage<T>);
-    const size_t offset = hdr->used_size;
 
+    uint32_t expectedOffset = hdr->used_size.load(std::memory_order_relaxed);
+    while (!hdr->used_size.compare_exchange_weak(expectedOffset, expectedOffset + storage_size,
+                                                 std::memory_order_acq_rel,
+                                                 std::memory_order_relaxed)) {
+      if (expectedOffset + storage_size > hdr->total_size) {
+        throw std::runtime_error("Not enough shared memory");
+      }
+    }
+
+    const uint32_t offset = expectedOffset;
     if (offset + storage_size > hdr->total_size) {
       throw std::runtime_error("Not enough shared memory");
     }
 
     auto *base = static_cast<std::byte *>(data());
-
     auto *storage = new (base + offset) VariableStorage<T>();
 
     storage->storage_type = StorageType::Variable;
@@ -259,7 +259,7 @@ private:
     std::memcpy(storage->name, name.data(), copy_len);
     storage->name[copy_len] = '\0';
 
-    hdr->used_size += storage_size;
+    std::atomic_thread_fence(std::memory_order_release);
     ++hdr->variable_count;
 
     return storage;
@@ -267,19 +267,26 @@ private:
 
   template <typename T, size_t Capacity>
   StreamStorage<T, Capacity> *create_stream(std::string_view name, int32_t update_rate) {
-
     auto *hdr = header();
 
     constexpr size_t storage_size = sizeof(StreamStorage<T, Capacity>);
 
-    const size_t offset = hdr->used_size;
+    uint32_t expectedOffset = hdr->used_size.load(std::memory_order_relaxed);
+    while (!hdr->used_size.compare_exchange_weak(expectedOffset, expectedOffset + storage_size,
+                                                 std::memory_order_acq_rel,
+                                                 std::memory_order_relaxed)) {
+      if (expectedOffset + storage_size > hdr->total_size) {
+        throw std::runtime_error("Not enough shared memory");
+      }
+    }
+
+    const uint32_t offset = expectedOffset;
 
     if (offset + storage_size > hdr->total_size) {
       throw std::runtime_error("Not enough shared memory");
     }
 
     auto *base = static_cast<std::byte *>(data());
-
     auto *storage = new (base + offset) StreamStorage<T, Capacity>();
 
     storage->storage_type = StorageType::Stream;
@@ -293,7 +300,7 @@ private:
     std::memcpy(storage->name, name.data(), copy_len);
     storage->name[copy_len] = '\0';
 
-    hdr->used_size += storage_size;
+    std::atomic_thread_fence(std::memory_order_release);
     ++hdr->stream_count;
 
     return storage;
@@ -320,7 +327,8 @@ private:
   }
 
   ShmPtr shm_;
-  bool initialized_ = false;
+  std::atomic_bool initialized_ = false;
+  std::recursive_mutex mutex_;
 };
 
 } // namespace ztrace::detail

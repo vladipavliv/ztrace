@@ -8,20 +8,11 @@
 #include <string>
 #include <string_view>
 
+#include "shm_header.hpp"
+
 namespace ztrace::detail {
 
 namespace ipc = boost::interprocess;
-
-struct alignas(64) ShmHeader {
-  uint64_t magic;
-  uint32_t version;
-  uint32_t total_size;
-  uint32_t used_size;
-  uint32_t variable_count;
-  uint32_t stream_count;
-};
-
-static_assert(sizeof(ShmHeader) == 64);
 
 class Shm {
 public:

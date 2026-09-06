@@ -21,3 +21,10 @@ target_link_libraries(producer_stress PRIVATE ztrace)
 add_executable(consumer_stress stress/consumer.cpp)
 target_link_libraries(consumer_stress PRIVATE ztrace)
 
+# Generator example
+add_executable(generator generator/producer.cpp)
+target_link_libraries(generator PRIVATE ztrace)
+
+add_executable(synthetic_generator generator/synthetic_generator.cpp)
+target_link_libraries(synthetic_generator PRIVATE ztrace)
+

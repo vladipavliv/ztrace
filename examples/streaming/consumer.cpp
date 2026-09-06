@@ -16,8 +16,15 @@ const size_t BUFFER_SIZE = 10;
 int main() {
   try {
     ztrace::init();
-    ztrace::Stream<FrameData> frame_stream("frames");
 
+    auto streams = ztrace::streams();
+    std::cout << "Opened " << streams.size() << " streams: " << std::endl;
+    for (auto &stream : streams) {
+      std::cout << stream.name << std::endl;
+    }
+    return 0;
+
+    ztrace::Stream<FrameData> frame_stream("frames");
     std::cout << "Streaming consumer started. Reading frames..." << std::endl;
 
     while (true) {
